@@ -1,73 +1,70 @@
 // src/pages/Dashboard.tsx
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
+import SummaryCards from '../components/dashboard/SummaryCards'
+import ActasSection from '../components/dashboard/ActasSection'
+import type { Acta } from '../components/dashboard/ActasSection'
+import MembersSection from '../components/dashboard/MembersSection'
+import type { Member } from '../components/dashboard/MembersSection'
 
 interface DashboardProps {
-  onLogout: () => void;
+  onLogout: () => void
 }
 
-type Acta = {
-  id: number;
-  fechaCreacion: string;
-  creador: string;
-};
-
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
-  const navigate = useNavigate();
-  const [emailUsuario, setEmailUsuario] = useState<string | null>(null);
+  const navigate = useNavigate()
 
-  const [pestañaActiva, setPestañaActiva] = useState<'actas' | 'settings'>('actas');
+  // pestaña del sidebar: 'Sesiones' o 'settings'
+  const [pestana, setPestana] = useState<'Sesiones' | 'settings'>('Sesiones')
+  // vista interna dentro de 'Sesiones': 'menu', 'Sesiones' o 'members'
+  const [view, setView] = useState<'menu' | 'Sesiones' | 'members'>('menu')
 
-  // Datos quemados de ejemplo para las actas
+  // datos de ejemplo
   const [actas] = useState<Acta[]>([
     { id: 1, fechaCreacion: '2025-05-28', creador: 'Juan Pérez' },
     { id: 2, fechaCreacion: '2025-05-30', creador: 'María Gómez' },
     { id: 3, fechaCreacion: '2025-06-01', creador: 'Carlos Vargas' },
-  ]);
+  ])
+  const [members] = useState<Member[]>([
+    { nombre: 'Marlon Vargas Alvarado', email: 'mvargas@example.com' },
+    { nombre: 'Jose Altamirano Rivera',  email: 'jaltamirano@example.com' },
+    { nombre: 'Anthony Quesada Alfaro',   email: 'aquesada@example.com' },
+  ])
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken')
     if (!token) {
-      navigate('/login');
-      return;
+      navigate('/login')
     }
-
-    const email = localStorage.getItem('userEmail');
-    setEmailUsuario(email);
-  }, [navigate]);
+  }, [navigate])
 
   const handleCerrarSesion = () => {
-    onLogout();
-    navigate('/login');
-  };
-
-  const handleCrearSesion = () => {
-    alert('Aquí iría la lógica para “Crear Sesión”');
-  };
+    onLogout()
+    navigate('/login')
+  }
+  const handleCrearSesion = () => navigate('/crear-sesion')
 
   return (
     <div className="flex h-screen bg-gray-100">
-
+      {/* SIDEBAR */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <h2 className="text-xl font-semibold px-6 py-4 border-b border-gray-200">
-          Menú
-        </h2>
-
+        <h2 className="text-xl font-semibold px-6 py-4 border-b border-gray-200">Menú</h2>
         <nav className="flex-1 px-2 py-4">
           <button
-            onClick={() => setPestañaActiva('actas')}
+            onClick={() => { setPestana('Sesiones'); setView('menu') }}
             className={`w-full text-left px-4 py-2 rounded-md mb-1 ${
-              pestañaActiva === 'actas'
+              pestana === 'Sesiones'
                 ? 'bg-blue-100 text-blue-700 font-medium'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Actas
+            Sesiones
           </button>
           <button
-            onClick={() => setPestañaActiva('settings')}
+            onClick={() => { setPestana('settings') /* no cambiamos view aquí */ }}
             className={`w-full text-left px-4 py-2 rounded-md mt-1 ${
-              pestañaActiva === 'settings'
+              pestana === 'settings'
                 ? 'bg-blue-100 text-blue-700 font-medium'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
@@ -75,7 +72,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             Settings
           </button>
         </nav>
-
         <button
           onClick={handleCerrarSesion}
           className="m-6 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded"
@@ -84,9 +80,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </button>
       </aside>
 
-    
+      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col">
-
         <header className="flex items-center justify-between bg-white shadow px-6 py-4">
           <h1 className="text-2xl font-semibold">Gestor de Sesiones</h1>
           <button
@@ -98,66 +93,46 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </header>
 
         <main className="flex-1 overflow-auto p-6">
-          {pestañaActiva === 'actas' ? (
-            // === Vista “Actas” ===
-            <section>
-              <h2 className="text-xl font-medium mb-4">Actas creadas</h2>
+          {pestana === 'Sesiones' && (
+            <>
+              {/* menú inicial de tarjetas */}
+              {view === 'menu' && (
+                <SummaryCards
+                  totalSessions={actas.length}
+                  totalMembers={members.length}
+                  onSessionsClick={() => setView('Sesiones')}
+                  onMembersClick={() => setView('members')}
+                />
+              )}
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">ID</th>
-                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Fecha de creación</th>
-                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Creador</th>
-                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {actas.map((acta) => (
-                      <tr key={acta.id} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{acta.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{acta.fechaCreacion}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{acta.creador}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {/* Botón de “Descargar PDF” (sin funcionalidad) */}
-                          <button
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-                          >
-                            Descargar PDF
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {actas.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                          No hay actas creadas.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ) : (
-            // === Vista “Settings” ===
+              {/* listado de actas encapsulado */}
+              {view === 'Sesiones' && (
+                <ActasSection
+                  actas={actas}
+                  onBack={() => setView('menu')}
+                />
+              )}
+
+              {/* listado de miembros encapsulado */}
+              {view === 'members' && (
+                <MembersSection
+                  members={members}
+                  onBack={() => setView('menu')}
+                />
+              )}
+            </>
+          )}
+
+          {pestana === 'settings' && (
             <section>
               <h2 className="text-xl font-medium mb-4">Settings</h2>
-              <p className="text-gray-700">
-                Aquí irían las opciones de configuración de tu aplicación. Por ejemplo:
-              </p>
-              <ul className="list-disc list-inside mt-3 text-gray-600">
-                <li>Cambiar contraseña</li>
-                <li>Editar perfil</li>
-                <li>Preferencias de notificaciones</li>
-              </ul>
+              <p className="text-gray-600">Configura tu perfil, notificaciones, etc.</p>
             </section>
           )}
         </main>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Dashboard;
+export default Dashboard

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; 
 
 interface LoginFormProps {
   onLoginSuccess: (fakeToken: string, userEmail: string) => void;
@@ -8,7 +8,6 @@ interface LoginFormProps {
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
-
   const [email, setEmail] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -16,19 +15,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
   useEffect(() => {
     if (!error) return;
-    const t = setTimeout(() => setError(null), 10_000);
+    const t = setTimeout(() => setError(null), 10000);
     return () => clearTimeout(t);
   }, [error]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-
     if (!email || !contrasena) {
       setError('Debes llenar email y contraseña.');
       return;
     }
-
     setLoading(true);
 
     setTimeout(() => {
@@ -37,21 +34,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         setError('Contraseña muy débil. Usa otra cosa.');
         return;
       }
-
       const fakeToken = 'token_falso_456';
-      const userEmail = email;
-
-      onLoginSuccess(fakeToken, userEmail);
-
+      onLoginSuccess(fakeToken, email);
       navigate('/dashboard');
     }, 1000);
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-lg shadow-md"
-    >
+    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4 text-center">Iniciar sesión</h2>
 
       {error && (
@@ -65,7 +55,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         <input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
           placeholder="ejemplo@dominio.com"
         />
@@ -76,7 +66,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         <input
           type="password"
           value={contrasena}
-          onChange={(e) => setContrasena(e.target.value)}
+          onChange={e => setContrasena(e.target.value)}
           className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
           placeholder="********"
         />
@@ -86,32 +76,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         type="submit"
         disabled={loading}
         className={`w-full py-2 px-4 text-white font-semibold rounded ${
-          loading
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700'
+          loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
         }`}
       >
         {loading ? 'Validando...' : 'Entrar'}
       </button>
 
-      <div className='mt-6 flex place-content-between'> 
-        <p className="mt-4 text-sm text-gray-600">
-          <a
-            href="/register"
-            className="text-blue-600 hover:underline"
-          >
-            Regístrate aquí
-          </a>
-        </p>
-
-        <p className="mt-4 text-sm text-gray-600">
-          <a
-            href="/reset-password"
-            className="text-blue-600 hover:underline"
-          >
-            Restablece tu contraseña
-          </a>
-        </p>
+      <div className="mt-6 flex justify-between">
+        <Link to="/register" className="text-sm text-blue-600 hover:underline">
+          Regístrate aquí
+        </Link>
+        <Link to="/reset-password" className="text-sm text-blue-600 hover:underline">
+          Restablece tu contraseña
+        </Link>
       </div>
     </form>
   );

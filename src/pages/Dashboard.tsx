@@ -7,6 +7,7 @@ import ActasSection from '../components/dashboard/ActasSection'
 import type { Acta } from '../components/dashboard/ActasSection'
 import MembersSection from '../components/dashboard/MembersSection'
 import type { Member } from '../components/dashboard/MembersSection'
+import SesionActiva from './SesionActiva'
 
 interface DashboardProps {
   onLogout: () => void
@@ -17,8 +18,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   // pestaña del sidebar: 'Sesiones' o 'settings'
   const [pestana, setPestana] = useState<'Sesiones' | 'settings'>('Sesiones')
-  // vista interna dentro de 'Sesiones': 'menu', 'Sesiones' o 'members'
-  const [view, setView] = useState<'menu' | 'Sesiones' | 'members'>('menu')
+  // vista interna dentro de 'Sesiones': 'menu', 'Sesiones', 'members', o 'sesion-activa'
+  const [view, setView] = useState<'menu' | 'Sesiones' | 'members' | 'sesion-activa'>('menu')
 
   // datos de ejemplo
   const [actas] = useState<Acta[]>([
@@ -102,6 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   totalMembers={members.length}
                   onSessionsClick={() => setView('Sesiones')}
                   onMembersClick={() => setView('members')}
+                  onSesionActivaClick={() => setView('sesion-activa')}
                 />
               )}
 
@@ -118,8 +120,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 <MembersSection
                   members={members}
                   onBack={() => setView('menu')}
+				  isAdmin={true} //PROPIEDAD CRUD SOLO ADMIN
                 />
               )}
+
+              {/* Sesión activa */}
+			  {view === 'sesion-activa' && (
+			    <SesionActiva
+				onBack={() => setView('menu')} />
+			  )}
             </>
           )}
 
@@ -136,3 +145,4 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 }
 
 export default Dashboard
+

@@ -1,18 +1,20 @@
 import React from 'react'
-import { FileText, Users } from 'lucide-react'
+import { FileText, Users, Clock } from 'lucide-react'
 
 interface SummaryCardsProps {
   totalSessions: number
   totalMembers: number
   onSessionsClick: () => void
   onMembersClick: () => void
+  onSesionActivaClick: () => void
 }
 
 const SummaryCards: React.FC<SummaryCardsProps> = ({
   totalSessions,
   totalMembers,
   onSessionsClick,
-  onMembersClick
+  onMembersClick,
+  onSesionActivaClick
 }) => (
   <div>
     {/* Encabezado */}
@@ -52,6 +54,20 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
         <div className="ml-4 text-left">
           <h3 className="text-lg font-semibold text-gray-800">Miembros de Junta</h3>
           <p className="mt-1 text-gray-500">{totalMembers} miembros</p>
+        </div>
+      </button>
+
+      {/* Sesión Activa */}
+      <button
+        onClick={onSesionActivaClick}
+        className="w-full flex items-center p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
+      >
+        <div className="p-3 bg-blue-100 rounded-full">
+          <Clock className="text-blue-600" size={24} />
+        </div>
+        <div className="ml-4 text-left">
+          <h3 className="text-lg font-semibold text-gray-800">Sesión Activa</h3>
+          <p className="mt-1 text-gray-500">Ir a gestionar</p>
         </div>
       </button>
     </div>

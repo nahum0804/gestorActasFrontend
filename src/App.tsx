@@ -1,40 +1,76 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import CreateSessionPage from './pages/CreateSessionPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';  
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import NewPasswordPage from './pages/NewPasswordPage';
+import ChangePasswordForm from './components/auth/ChangePasswordForm';
+import ProfileForm from './components/auth/ProfileForm'; // Importación del nuevo componente
+
+type UserRole = 'ADMINISTRADOR' | 'EDITOR' | 'VISOR';
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
+    const roles = localStorage.getItem('userRoles');
+    
     setIsAuthenticated(!!token);
+    if (roles) {
+      try {
+        setUserRoles(JSON.parse(roles) as UserRole[]);
+      } catch {
+        setUserRoles([]);
+      }
+    }
   }, []);
 
-  const handleLoginSuccess = (fakeToken: string, userEmail: string) => {
-    localStorage.setItem('authToken', fakeToken);
+  const handleLoginSuccess = (token: string, userEmail: string, roles: UserRole[] = ['VISOR']) => {
+    localStorage.setItem('authToken', token);
     localStorage.setItem('userEmail', userEmail);
+    localStorage.setItem('userRoles', JSON.stringify(roles));
     setIsAuthenticated(true);
+    setUserRoles(roles);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userRoles');
     setIsAuthenticated(false);
+    setUserRoles([]);
+  };
+
+  // Componente para proteger rutas
+  const ProtectedRoute: React.FC<{
+    children: React.ReactNode;
+    requiredRoles?: UserRole[];
+    redirectTo?: string;
+  }> = ({ children, requiredRoles, redirectTo = '/dashboard' }) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+
+    if (requiredRoles && !requiredRoles.some(role => userRoles.includes(role))) {
+      return <Navigate to={redirectTo} replace />;
+    }
+
+    return <>{children}</>;
   };
 
   return (
     <BrowserRouter>
       <Routes>
+        {/* Rutas públicas */}
         <Route
           path="/login"
           element={
-            isAuthenticated
-              ? <Navigate to="/dashboard" replace />
+            isAuthenticated 
+              ? <Navigate to="/dashboard" replace /> 
               : <LoginPage onLoginSuccess={handleLoginSuccess} />
           }
         />
@@ -49,38 +85,66 @@ const App: React.FC = () => {
         />
 
         <Route
-          path="/reset-password"              
+          path="/reset-password"
           element={
             isAuthenticated
-              ? <Navigate to="/dashboard" replace />  
+              ? <Navigate to="/dashboard" replace />
               : <ResetPasswordPage />
           }
         />
 
         <Route
-          path="/dashboard"
+          path="/reset-password/:token"
           element={
             isAuthenticated
-              ? <Dashboard onLogout={handleLogout} />
-              : <Navigate to="/login" replace />
+              ? <Navigate to="/dashboard" replace />
+              : <NewPasswordPage />
           }
         />
 
-        <Route 
-          path="/crear-sesion"
+        {/* Rutas protegidas */}
+        <Route
+          path="/dashboard"
           element={
-            isAuthenticated
-              ? <CreateSessionPage />
-              : <Navigate to="/login" replace />
+            <ProtectedRoute>
+              <Dashboard onLogout={handleLogout} />
+            </ProtectedRoute>
           }
         />
 
         <Route
+          path="/crear-sesion"
+          element={
+            <ProtectedRoute requiredRoles={['ADMINISTRADOR', 'EDITOR']}>
+              <CreateSessionPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Nueva ruta de perfil */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfileForm />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePasswordForm />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta comodín */}
+        <Route
           path="*"
           element={
-            isAuthenticated
-              ? <Navigate to="/dashboard" replace />
-              : <Navigate to="/login" replace />
+            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
           }
         />
       </Routes>

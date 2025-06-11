@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; 
+import { useNavigate , Link } from 'react-router-dom'; 
+
 
 interface LoginFormProps {
   onLoginSuccess: (fakeToken: string, userEmail: string) => void;
@@ -18,29 +19,56 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     const t = setTimeout(() => setError(null), 10000);
     return () => clearTimeout(t);
   }, [error]);
+ 
 
-  const handleSubmit = (e: FormEvent) => {
+  /*  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      onLoginSuccess('auto-login-token', 'dev@example.com');
+      navigate('/dashboard');
+    }
+  }, []); 
+ */
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
     if (!email || !contrasena) {
       setError('Debes llenar email y contraseña.');
       return;
     }
+
     setLoading(true);
 
-    setTimeout(() => {
-      if (contrasena === '123') {
-        setLoading(false);
-        setError('Contraseña muy débil. Usa otra cosa.');
-        return;
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password: contrasena }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al iniciar sesión');
       }
-      const fakeToken = 'token_falso_456';
-      onLoginSuccess(fakeToken, email);
+
+      
+
+      onLoginSuccess(data.token, email);
       navigate('/dashboard');
-    }, 1000);
+
+     } catch (err: any) {
+      setError(err.message || 'Ocurrió un error');
+    } finally {
+      setLoading(false);
+    } 
   };
 
-  return (
+  
+
+   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4 text-center">Iniciar sesión</h2>
 
@@ -89,9 +117,25 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         <Link to="/reset-password" className="text-sm text-blue-600 hover:underline">
           Restablece tu contraseña
         </Link>
-      </div>
+      </div> */
+      /* Botón de desarrollo para bypass */
+/* {process.env.NODE_ENV === 'development' && (
+  <div className="mt-4 text-center">
+    <button
+      type="button"
+      onClick={() => {
+        onLoginSuccess('dev-bypass-token', 'dev@example.com');
+        navigate('/dashboard');
+      }}
+      className="text-sm text-blue-600 hover:underline"
+    >
+      [DEV] Acceso rápido sin validación
+    </button>
+  </div>
+)}  
     </form>
   );
 };
 
 export default LoginForm;
+ 

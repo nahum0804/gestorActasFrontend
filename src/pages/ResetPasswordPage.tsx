@@ -1,12 +1,17 @@
-import React from 'react'
-import ResetPasswordForm from '../components/auth/ResetPasswordForm'
+// src/pages/ResetPasswordPage.tsx
+import React from 'react';
+import ResetPasswordForm from '../components/auth/ResetPasswordForm';
 
-const ResetPasswordPage: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-    <div className="w-full max-w-md">
-      <ResetPasswordForm />
+interface ResetPasswordPageProps {}
+
+const ResetPasswordPage: React.FC<ResetPasswordPageProps> = () => {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
+      <div className="w-full max-w-md">
+        <ResetPasswordForm />
+      </div>
     </div>
-  </div>
-)
+  );
+};
 
-export default ResetPasswordPage
+export default ResetPasswordPage;

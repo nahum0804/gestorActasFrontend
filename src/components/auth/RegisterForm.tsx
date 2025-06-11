@@ -22,7 +22,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     return () => clearTimeout(t);
   }, [error]);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -37,14 +37,32 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
 
     setLoading(true);
 
-    setTimeout(() => {
-      const fakeToken = 'token_falso_123';
-      const userEmail = email;
+    try {
+      const response = await fetch('http://localhost:3000/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre,
+          email,
+          password: contrasena,
+        }),
+      });
 
-      onRegisterSuccess(fakeToken, userEmail);
+      const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al registrar usuario');
+      }
+
+      onRegisterSuccess(data.token, email);
       navigate('/dashboard');
-    }, 1000);
+    } catch (err: any) {
+      setError(err.message || 'Ocurrió un error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -1,69 +1,91 @@
 import React, { useState } from 'react'
 
-interface PuntoDeAgenda {
+interface PuntoAgenda {
   id: number
   titulo: string
+  requiereVotacion: boolean
 }
 
 interface VotacionesSectionProps {
-  puntos: PuntoDeAgenda[]
+  puntos: PuntoAgenda[]
 }
 
 const VotacionesSection: React.FC<VotacionesSectionProps> = ({ puntos }) => {
-  const [votos, setVotos] = useState<Record<number, 'favor' | 'contra' | 'abstencion' | undefined>>({})
+  const [resultados, setResultados] = useState(() =>
+    puntos.map(p => ({
+      puntoId: p.id,
+      aFavor: 0,
+      enContra: 0,
+      abstencion: 0,
+      acta: ''
+    }))
+  )
 
-  const handleVoto = (puntoId: number, voto: 'favor' | 'contra' | 'abstencion') => {
-    setVotos(prev => ({ ...prev, [puntoId]: voto }))
+  const handleChange = (puntoId: number, field: 'aFavor' | 'enContra' | 'abstencion' | 'acta', value: number | string) => {
+    setResultados(prev =>
+      prev.map(r => r.puntoId === puntoId ? { ...r, [field]: value } : r)
+    )
+  }
+
+  const handleGuardarTodos = () => {
+    console.log('Resultados a guardar:', resultados)
+    // Aquí podrías hacer un POST al backend con los resultados.
+    alert('✔ Resultados guardados (ver consola para detalles)')
   }
 
   return (
     <div className="space-y-6">
       {puntos.map(p => (
         <div key={p.id} className="border p-4 rounded shadow bg-white">
-          <h3 className="font-medium text-gray-800 mb-2">{p.titulo}</h3>
-          <div className="flex items-center space-x-4">
-            <label className="flex items-center space-x-2">
+          <h3 className="text-lg font-semibold mb-2">{p.titulo}</h3>
+
+          <div className="flex gap-4 mb-4">
+            <label className="flex flex-col text-sm">
+              A favor
               <input
-                type="radio"
-                name={`voto-${p.id}`}
-                value="favor"
-                checked={votos[p.id] === 'favor'}
-                onChange={() => handleVoto(p.id, 'favor')}
+                type="number"
+                min={0}
+                className="border rounded px-2 py-1"
+                onChange={e => handleChange(p.id, 'aFavor', parseInt(e.target.value))}
               />
-              <span>A favor</span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex flex-col text-sm">
+              En contra
               <input
-                type="radio"
-                name={`voto-${p.id}`}
-                value="contra"
-                checked={votos[p.id] === 'contra'}
-                onChange={() => handleVoto(p.id, 'contra')}
+                type="number"
+                min={0}
+                className="border rounded px-2 py-1"
+                onChange={e => handleChange(p.id, 'enContra', parseInt(e.target.value))}
               />
-              <span>En contra</span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex flex-col text-sm">
+              Abstenciones
               <input
-                type="radio"
-                name={`voto-${p.id}`}
-                value="abstencion"
-                checked={votos[p.id] === 'abstencion'}
-                onChange={() => handleVoto(p.id, 'abstencion')}
+                type="number"
+                min={0}
+                className="border rounded px-2 py-1"
+                onChange={e => handleChange(p.id, 'abstencion', parseInt(e.target.value))}
               />
-              <span>Abstención</span>
             </label>
           </div>
 
-          <div className="mt-3 text-sm text-gray-600">
-            Resultado: {
-              votos[p.id] === 'favor' ? '✅ A favor' :
-              votos[p.id] === 'contra' ? '❌ En contra' :
-              votos[p.id] === 'abstencion' ? 'Abstención' :
-              '— Sin votar'
-            }
-          </div>
+          <label className="block text-sm mb-1">Redacción del acta para este punto</label>
+          <textarea
+            className="w-full border rounded px-3 py-2"
+            rows={3}
+            onChange={e => handleChange(p.id, 'acta', e.target.value)}
+          />
         </div>
       ))}
+
+      <div className="text-right">
+        <button
+          onClick={handleGuardarTodos}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
+        >
+          Guardar todos
+        </button>
+      </div>
     </div>
   )
 }

@@ -36,7 +36,7 @@ const SesionActiva: React.FC = () => {
 
       {/* Sección 2: Votaciones por punto */}
       <section className="bg-white shadow rounded p-4">
-        <h2 className="text-lg font-semibold mb-2">Votaciones por Punto de Agenda</h2>
+        <h2 className="text-lg font-semibold mb-6">Votaciones por Punto de Agenda</h2>
         <VotacionesSection puntos={puntosAgenda} />
       </section>
 	  {/* Sección 3: Redacción del Acta */}

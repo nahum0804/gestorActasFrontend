@@ -10,6 +10,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
   const navigate = useNavigate();
 
   const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [email, setEmail] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [confirmContrasena, setConfirmContrasena] = useState('');
@@ -26,7 +27,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     e.preventDefault();
     setError(null);
 
-    if (!nombre || !email || !contrasena || !confirmContrasena) {
+    if (!nombre || !apellido || !email || !contrasena || !confirmContrasena) {
       setError('Todos los campos son obligatorios.');
       return;
     }
@@ -38,13 +39,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/auth/register', {
+      const response = await fetch('http://localhost:3000/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          nombre,
+          name: nombre,
+          lastName: apellido,
           email,
           password: contrasena,
         }),
@@ -58,18 +60,19 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
 
       onRegisterSuccess(data.token, email);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Ocurrió un error');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Ocurrió un error');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-lg shadow-md"
-    >
+    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4 text-center">Crear cuenta</h2>
 
       {error && (
@@ -79,13 +82,24 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
       )}
 
       <label className="block mb-2">
-        <span className="text-gray-700">Nombre completo</span>
+        <span className="text-gray-700">Nombre</span>
         <input
           type="text"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
           placeholder="Tu nombre"
+        />
+      </label>
+
+      <label className="block mb-2">
+        <span className="text-gray-700">Apellido</span>
+        <input
+          type="text"
+          value={apellido}
+          onChange={(e) => setApellido(e.target.value)}
+          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Tu apellido"
         />
       </label>
 
@@ -126,9 +140,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onRegisterSuccess }) => {
         type="submit"
         disabled={loading}
         className={`w-full py-2 px-4 text-white font-semibold rounded ${
-          loading
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700'
+          loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
         }`}
       >
         {loading ? 'Registrando...' : 'Registrarme'}

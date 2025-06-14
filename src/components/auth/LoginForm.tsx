@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate , Link } from 'react-router-dom'; 
-
+import { useNavigate, Link } from 'react-router-dom';
 
 interface LoginFormProps {
   onLoginSuccess: (fakeToken: string, userEmail: string) => void;
@@ -19,15 +18,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     const t = setTimeout(() => setError(null), 10000);
     return () => clearTimeout(t);
   }, [error]);
- 
 
-  /*  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      onLoginSuccess('auto-login-token', 'dev@example.com');
-      navigate('/dashboard');
-    }
-  }, []); 
- */
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -54,21 +45,21 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         throw new Error(data.message || 'Error al iniciar sesión');
       }
 
-      
-
-      onLoginSuccess(data.token, email);
+      localStorage.setItem('token', data.token);
+      onLoginSuccess(data.token, data.email);
       navigate('/dashboard');
-
-     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Ocurrió un error');
+      }
     } finally {
       setLoading(false);
-    } 
+    }
   };
 
-  
-
-   return (
+  return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4 text-center">Iniciar sesión</h2>
 
@@ -117,25 +108,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         <Link to="/reset-password" className="text-sm text-blue-600 hover:underline">
           Restablece tu contraseña
         </Link>
-      </div> */
-      /* Botón de desarrollo para bypass */
-/* {process.env.NODE_ENV === 'development' && (
-  <div className="mt-4 text-center">
-    <button
-      type="button"
-      onClick={() => {
-        onLoginSuccess('dev-bypass-token', 'dev@example.com');
-        navigate('/dashboard');
-      }}
-      className="text-sm text-blue-600 hover:underline"
-    >
-      [DEV] Acceso rápido sin validación
-    </button>
-  </div>
-)}  
+      </div>
     </form>
   );
 };
 
 export default LoginForm;
- 

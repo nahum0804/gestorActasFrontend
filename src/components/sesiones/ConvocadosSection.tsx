@@ -1,20 +1,19 @@
-import React, { useState } from 'react'
-import type { FC } from 'react'
+import React, { FC } from 'react'
 
-interface AsistentesProps {
+interface ConvocadosProps {
   markDirty: () => void
 }
 
-const asistentesFijos = [
+const convocadosFijos = [
   { nombre: 'Marlon Vargas Alvarado', rol: 'Profesor' },
-  { nombre: 'Jose Altamirano Rivera', rol: 'Profesor' },
-  { nombre: 'Anthony Quesada Alfaro', rol: 'Estudiante' },
+  { nombre: 'Jose Altamirano Rivera',  rol: 'Profesor' },
+  { nombre: 'Anthony Quesada Alfaro',   rol: 'Estudiante' },
 ]
 
-const AsistentesSection: FC<AsistentesProps> = ({ markDirty }) => (
+const ConvocadosSection: FC<ConvocadosProps> = ({ markDirty }) => (
   <section className="space-y-4 bg-white p-6 rounded shadow">
     <div className="space-y-2">
-      {asistentesFijos.map(({ nombre, rol }) => (
+      {convocadosFijos.map(({ nombre, rol }) => (
         <label key={nombre} className="flex items-center">
           <input type="checkbox" onChange={markDirty} className="mr-2" />
           {nombre}
@@ -35,9 +34,13 @@ const AsistentesSection: FC<AsistentesProps> = ({ markDirty }) => (
       </select>
       <button onClick={markDirty} className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded">+ Agregar</button>
     </div>
-    <div className="space-x-2">
+    <div className="flex justify-center space-x-2 mt-4">
       {['Todos Presentes','Todos Ausentes','Personalizado'].map(label => (
-        <button key={label} onClick={markDirty} className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300">
+        <button
+          key={label}
+          onClick={markDirty}
+          className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
+        >
           {label}
         </button>
       ))}
@@ -45,4 +48,4 @@ const AsistentesSection: FC<AsistentesProps> = ({ markDirty }) => (
   </section>
 )
 
-export default AsistentesSection
+export default ConvocadosSection

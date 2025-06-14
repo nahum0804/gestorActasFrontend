@@ -7,7 +7,7 @@ import CreateSessionPage from './pages/CreateSessionPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NewPasswordPage from './pages/NewPasswordPage';
 import ChangePasswordForm from './components/auth/ChangePasswordForm';
-import ProfileForm from './components/auth/ProfileForm'; // Importación del nuevo componente
+import ProfileForm from './components/auth/ProfileForm';
 
 type UserRole = 'ADMINISTRADOR' | 'EDITOR' | 'VISOR';
 
@@ -15,11 +15,13 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
+  // Verificar autenticación al cargar
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const roles = localStorage.getItem('userRoles');
-    
+
     setIsAuthenticated(!!token);
+
     if (roles) {
       try {
         setUserRoles(JSON.parse(roles) as UserRole[]);
@@ -29,6 +31,7 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Guardar token y roles después del login exitoso
   const handleLoginSuccess = (token: string, userEmail: string, roles: UserRole[] = ['VISOR']) => {
     localStorage.setItem('authToken', token);
     localStorage.setItem('userEmail', userEmail);
@@ -37,6 +40,7 @@ const App: React.FC = () => {
     setUserRoles(roles);
   };
 
+  // Cerrar sesión y limpiar storage
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userEmail');
@@ -45,7 +49,7 @@ const App: React.FC = () => {
     setUserRoles([]);
   };
 
-  // Componente para proteger rutas
+  // Ruta protegida con verificación opcional de roles
   const ProtectedRoute: React.FC<{
     children: React.ReactNode;
     requiredRoles?: UserRole[];
@@ -69,8 +73,8 @@ const App: React.FC = () => {
         <Route
           path="/login"
           element={
-            isAuthenticated 
-              ? <Navigate to="/dashboard" replace /> 
+            isAuthenticated
+              ? <Navigate to="/dashboard" replace />
               : <LoginPage onLoginSuccess={handleLoginSuccess} />
           }
         />
@@ -121,7 +125,6 @@ const App: React.FC = () => {
           }
         />
 
-        {/* Nueva ruta de perfil */}
         <Route
           path="/profile"
           element={
@@ -144,7 +147,7 @@ const App: React.FC = () => {
         <Route
           path="*"
           element={
-            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+            <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
           }
         />
       </Routes>

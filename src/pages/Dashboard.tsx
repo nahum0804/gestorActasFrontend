@@ -1,133 +1,117 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import SummaryCards from '../components/dashboard/SummaryCards';
-import ActasSection from '../components/dashboard/ActasSection';
-import MembersSection from '../components/dashboard/MembersSection';
-import type { Member } from '../components/dashboard/MembersSection';
-import type { Acta, CreateActaDto } from '../interfaces/acta';
+// src/pages/Dashboard.tsx
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import SummaryCards from '../components/dashboard/SummaryCards'
+import ActasSection from '../components/dashboard/ActasSection'
+import MembersSection from '../components/dashboard/MembersSection'
+import type { Member } from '../components/dashboard/MembersSection'
+import type { Acta, CreateActaDto } from '../interfaces/acta'
 
 interface DashboardProps {
-  onLogout: () => void;
+  onLogout: () => void
 }
 
-// Simulación de API
-const mockActaApi = {
-  getActas: async (): Promise<Acta[]> => {
-    return [
-      { 
-        id: 1, 
-        codigo: 'SO-05-2025', 
-        titulo: 'Sesión Ordinaria Mayo 2025', 
-        fechaCreacion: '2025-05-28', 
-        fechaSesion: '2025-05-28',
-        creador: 'Juan Pérez', 
-        estado: 'cerrada',
-        contenido: 'Contenido del acta...',
-        pdfUrl: '/actas/SO-05-2025.pdf'
-      },
-      { 
-        id: 2, 
-        codigo: 'SO-06-2025', 
-        titulo: 'Sesión Ordinaria Junio 2025', 
-        fechaCreacion: '2025-06-01', 
-        fechaSesion: '2025-06-05',
-        creador: 'María Gómez', 
-        estado: 'pendiente',
-        contenido: 'Contenido pendiente...'
-      },
-      { 
-        id: 3, 
-        codigo: 'EX-01-2025', 
-        titulo: 'Sesión Extraordinaria', 
-        fechaCreacion: '2025-06-10', 
-        fechaSesion: '2025-06-15',
-        creador: 'Carlos Vargas', 
-        estado: 'borrador',
-        contenido: 'Borrador del acta...'
-      }
-    ];
-  },
-  createActa: async (data: CreateActaDto): Promise<Acta> => {
-    return { 
-      ...data, 
-      id: Date.now(), 
-      codigo: `SO-${new Date().getMonth()+1}-${new Date().getFullYear()}`, 
-      fechaCreacion: new Date().toISOString(), 
-      creador: 'Usuario Actual', 
-      estado: 'borrador',
-      pdfUrl: undefined
-    };
-  },
-  generatePdf: async (actaId: number): Promise<string> => {
-    return `/actas/acta-${actaId}.pdf`;
-  }
-};
-
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
-  const navigate = useNavigate();
-  const [pestana, setPestana] = useState<'Sesiones' | 'settings'>('Sesiones');
-  const [view, setView] = useState<'menu' | 'Sesiones' | 'members'>('menu');
-  const [actas, setActas] = useState<Acta[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [members] = useState<Member[]>([
-    { nombre: 'Marlon Vargas Alvarado', email: 'mvargas@example.com' },
-    { nombre: 'Jose Altamirano Rivera',  email: 'jaltamirano@example.com' },
-    { nombre: 'Anthony Quesada Alfaro',   email: 'aquesada@example.com' },
-  ]);
+  const navigate = useNavigate()
 
+  // Pestañas y vistas
+  const [pestana, setPestana] = useState<'Sesiones'|'settings'>('Sesiones')
+  const [view, setView]     = useState<'menu'|'Sesiones'|'members'>('menu')
+
+  // Actas (simulado)
+  const [actas, setActas]       = useState<Acta[]>([])
+  const [loadingActas, setLoadingActas] = useState(true)
+
+  // Miembros (reales desde API)
+  const [members, setMembers]           = useState<Member[]>([])
+  const [loadingMembers, setLoadingMembers] = useState(false)
+  const [errorMembers, setErrorMembers]     = useState<string|null>(null)
+
+  // Al montar, revisa token y carga actas
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken')
     if (!token) {
-      navigate('/login');
+      navigate('/login')
+      return
     }
-  }, [navigate]);
 
-  useEffect(() => {
+    // mockActaApi
     const fetchActas = async () => {
       try {
-        const data = await mockActaApi.getActas();
-        setActas(data);
-      } catch (error) {
-        console.error('Error fetching actas:', error);
+        const data = await mockActaApi.getActas()
+        setActas(data)
+      } catch (err) {
+        console.error(err)
       } finally {
-        setLoading(false);
+        setLoadingActas(false)
       }
-    };
-    fetchActas();
-  }, []);
+    }
+    fetchActas()
+  }, [navigate])
 
+  // Handlers de botones
   const handleCerrarSesion = () => {
-    onLogout();
-    navigate('/login');
-  };
-
-  const handleCrearSesion = () => navigate('/crear-sesion');
-
+    onLogout()
+    navigate('/login')
+  }
+  const handleCrearSesion = () => {
+    navigate('/crear-sesion')
+  }
   const handleCreateActa = async () => {
     const newActa = await mockActaApi.createActa({
       titulo: 'Nueva Acta',
       fechaSesion: new Date().toISOString().split('T')[0],
-      contenido: ''
-    });
-    setActas([...actas, newActa]);
-    navigate(`/editar-acta/${newActa.id}`);
-  };
+      contenido: '',
+    })
+    setActas([...actas, newActa])
+    navigate(`/editar-acta/${newActa.id}`)
+  }
 
-  const handleDownloadPdf = async (actaId: number) => {
-    try {
-      const pdfUrl = await mockActaApi.generatePdf(actaId);
-      // Simular descarga
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = `acta-${actaId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('No se pudo generar el PDF');
+  // --- NUEVO: traer miembros al hacer click ---
+  const handleMembersClick = async () => {
+    setLoadingMembers(true)
+    setErrorMembers(null)
+
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      setErrorMembers('No estás autenticado')
+      setLoadingMembers(false)
+      return
     }
-  };
+
+    try {
+      const res = await fetch('http://localhost:3000/api/junta-directiva/miembros', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.message ?? res.statusText)
+      }
+      const data: Array<{
+        _id: string
+        name: string
+        lastName: string
+        email: string
+      }> = await res.json()
+
+      // Mapear al tipo Member
+      setMembers(
+        data.map(u => ({
+          nombre: `${u.name} ${u.lastName}`,
+          email: u.email,
+        }))
+      )
+      setView('members')
+    } catch (err: any) {
+      console.error(err)
+      setErrorMembers(err.message || 'Error al cargar miembros')
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -146,7 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             Sesiones
           </button>
           <button
-            onClick={() => { setPestana('settings') }}
+            onClick={() => setPestana('settings')}
             className={`w-full text-left px-4 py-2 rounded-md mt-1 ${
               pestana === 'settings'
                 ? 'bg-blue-100 text-blue-700 font-medium'
@@ -192,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   totalSessions={actas.length}
                   totalMembers={members.length}
                   onSessionsClick={() => setView('Sesiones')}
-                  onMembersClick={() => setView('members')}
+                  onMembersClick={handleMembersClick}   // ← aquí
                 />
               )}
 
@@ -200,16 +184,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 <ActasSection
                   actas={actas}
                   onBack={() => setView('menu')}
-                  onDownloadPdf={handleDownloadPdf}
-                  loading={loading}
+                  onDownloadPdf={async (id) => {
+                    /* tu lógica para descargar */
+                  }}
+                  loading={loadingActas}
                 />
               )}
 
               {view === 'members' && (
-                <MembersSection
-                  members={members}
-                  onBack={() => setView('menu')}
-                />
+                loadingMembers ? (
+                  <p>Cargando miembros de la junta…</p>
+                ) : errorMembers ? (
+                  <p className="text-red-500">Error: {errorMembers}</p>
+                ) : (
+                  <MembersSection
+                    members={members}
+                    onBack={() => setView('menu')}
+                  />
+                )
               )}
             </>
           )}
@@ -223,7 +215,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </main>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Dashboard;
+export default Dashboard

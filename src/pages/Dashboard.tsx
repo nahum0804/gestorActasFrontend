@@ -97,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         email: string
       }> = await res.json()
 
-      // Mapear al tipo Member
+      
       setMembers(
         data.map(u => ({
           nombre: `${u.name} ${u.lastName}`,

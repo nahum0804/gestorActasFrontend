@@ -119,7 +119,7 @@ const App: React.FC = () => {
         <Route
           path="/crear-sesion"
           element={
-            <ProtectedRoute requiredRoles={['ADMINISTRADOR', 'EDITOR']}>
+            <ProtectedRoute requiredRoles={['ADMINISTRADOR', 'EDITOR', 'VISOR']}>
               <CreateSessionPage />
             </ProtectedRoute>
           }

@@ -5,7 +5,8 @@ import SummaryCards from '../components/dashboard/SummaryCards'
 import ActasSection from '../components/dashboard/ActasSection'
 import MembersSection from '../components/dashboard/MembersSection'
 import type { Member } from '../components/dashboard/MembersSection'
-import type { Acta, CreateActaDto } from '../interfaces/acta'
+import type { Acta } from '../interfaces/acta'
+import SesionActiva from './SesionActiva'
 
 interface DashboardProps {
   onLogout: () => void
@@ -14,20 +15,16 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const navigate = useNavigate()
 
-  // Pestañas y vistas
   const [pestana, setPestana] = useState<'Sesiones'|'settings'>('Sesiones')
-  const [view, setView]     = useState<'menu'|'Sesiones'|'members'>('menu')
+  const [view, setView] = useState<'menu'|'Sesiones'|'members'|'sesion-activa'>('menu')
 
-  // Actas (simulado)
-  const [actas, setActas]       = useState<Acta[]>([])
+  const [actas, setActas] = useState<Acta[]>([])
   const [loadingActas, setLoadingActas] = useState(true)
 
-  // Miembros (reales desde API)
-  const [members, setMembers]           = useState<Member[]>([])
+  const [members, setMembers] = useState<Member[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
-  const [errorMembers, setErrorMembers]     = useState<string|null>(null)
+  const [errorMembers, setErrorMembers] = useState<string|null>(null)
 
-  // Al montar, revisa token y carga actas
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     if (!token) {
@@ -35,10 +32,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       return
     }
 
-    // mockActaApi
     const fetchActas = async () => {
       try {
-        const data = await mockActaApi.getActas()
+        const res = await fetch('http://localhost:3000/api/actas', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!res.ok) throw new Error('Error al cargar actas')
+
+        const data: Acta[] = await res.json()
         setActas(data)
       } catch (err) {
         console.error(err)
@@ -46,28 +51,47 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         setLoadingActas(false)
       }
     }
+
     fetchActas()
   }, [navigate])
 
-  // Handlers de botones
   const handleCerrarSesion = () => {
     onLogout()
     navigate('/login')
   }
+
   const handleCrearSesion = () => {
     navigate('/crear-sesion')
   }
+
   const handleCreateActa = async () => {
-    const newActa = await mockActaApi.createActa({
-      titulo: 'Nueva Acta',
-      fechaSesion: new Date().toISOString().split('T')[0],
-      contenido: '',
-    })
-    setActas([...actas, newActa])
-    navigate(`/editar-acta/${newActa.id}`)
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+
+    try {
+      const res = await fetch('http://localhost:3000/api/actas', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          titulo: 'Nueva Acta',
+          fechaSesion: new Date().toISOString().split('T')[0],
+          contenido: ''
+        })
+      })
+
+      if (!res.ok) throw new Error('Error al crear acta')
+
+      const newActa: Acta = await res.json()
+      setActas([...actas, newActa])
+      navigate(`/editar-acta/${newActa.id}`)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  // --- NUEVO: traer miembros al hacer click ---
   const handleMembersClick = async () => {
     setLoadingMembers(true)
     setErrorMembers(null)
@@ -81,27 +105,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
     try {
       const res = await fetch('http://localhost:3000/api/junta-directiva/miembros', {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
+        cache: 'no-store'
       })
+
       if (!res.ok) {
         const body = await res.json().catch(() => null)
         throw new Error(body?.message ?? res.statusText)
       }
-      const data: Array<{
-        _id: string
-        name: string
-        lastName: string
-        email: string
-      }> = await res.json()
 
-      
+      const data = await res.json()
+      console.log('Miembros desde API:', data)
+
+      if (!Array.isArray(data)) {
+        console.warn('La respuesta de miembros no es un array:', data)
+        setErrorMembers('Respuesta inválida del servidor')
+        return
+      }
+
       setMembers(
-        data.map(u => ({
-          nombre: `${u.name} ${u.lastName}`,
-          email: u.email,
+        data.map((u: any) => ({
+          nombre: `${u.name ?? u.nombre ?? 'SinNombre'} ${u.lastName ?? ''}`,
+          email: u.email ?? u.correo ?? 'sin-email@ejemplo.com',
         }))
       )
       setView('members')
@@ -115,7 +144,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* SIDEBAR */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <h2 className="text-xl font-semibold px-6 py-4 border-b border-gray-200">Menú</h2>
         <nav className="flex-1 px-2 py-4">
@@ -148,7 +176,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </button>
       </aside>
 
-      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between bg-white shadow px-6 py-4">
           <h1 className="text-2xl font-semibold">Gestor de Sesiones</h1>
@@ -176,7 +203,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   totalSessions={actas.length}
                   totalMembers={members.length}
                   onSessionsClick={() => setView('Sesiones')}
-                  onMembersClick={handleMembersClick}   // ← aquí
+                  onMembersClick={handleMembersClick}
+                  onSesionActivaClick={() => setView('sesion-activa')}
                 />
               )}
 
@@ -184,9 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 <ActasSection
                   actas={actas}
                   onBack={() => setView('menu')}
-                  onDownloadPdf={async (id) => {
-                    /* tu lógica para descargar */
-                  }}
+                  onDownloadPdf={async (id) => {/* PDF logic */}}
                   loading={loadingActas}
                 />
               )}
@@ -202,6 +228,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     onBack={() => setView('menu')}
                   />
                 )
+              )}
+
+              {view === 'sesion-activa' && (
+                <SesionActiva onBack={() => setView('menu')} />
               )}
             </>
           )}

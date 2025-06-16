@@ -7,85 +7,139 @@ import ConvocadosSection from '../components/sesiones/ConvocadosSection'
 import AgendaSection from '../components/sesiones/AgendaSection'
 import NotificationSection from '../components/sesiones/NotificationSection'
 
-type TabKey = 'info' | 'convocados' | 'agenda'| 'notificacion'
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'info',         label: 'Información Básica' },
-  { key: 'convocados',   label: 'Convocados'       },
-  { key: 'agenda',       label: 'Puntos de Agenda' },
-  { key: 'notificacion', label: 'Notificación'     },
-]
+interface InfoData {
+  tipo: 'ORDINARIA' | 'EXTRAORDINARIA'
+  fecha: string
+  hora: string
+  modalidad: string
+  plataforma?: string
+  juntaDirectiva: string
+  encargado: string
+}
+
+interface Invitado {
+  nombre: string
+  correo: string
+}
+
+interface AgendaPunto {
+  titulo: string
+  orden: number
+  expositor: string
+  tipo: 'informacion' | 'votacion'
+}
+
+type TabKey = 'info' | 'convocados' | 'agenda' | 'notificacion'
 
 const CreateSessionPage: React.FC = () => {
   const navigate = useNavigate()
-
-  // 1) flag de cambios
+  const [activeTab, setActiveTab] = useState<TabKey>('info')
   const [dirty, setDirty] = useState(false)
   const markDirty = useCallback(() => setDirty(true), [])
 
+  const [infoData, setInfoData] = useState<InfoData>({
+    tipo: 'ORDINARIA',
+    fecha: '',
+    hora: '',
+    modalidad: 'Híbrida',
+    plataforma: 'Zoom',
+    juntaDirectiva: '',
+    encargado: ''
+  })
+
+  const [invitados, setInvitados] = useState<Invitado[]>([])
+  const [agendaDtos, setAgendaDtos] = useState<AgendaPunto[]>([])
+
   useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (dirty) {
-        e.preventDefault()
-        e.returnValue = ''
+    const fetchJuntaYEncargado = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/junta-directiva/miembros')
+        const data = await res.json()
+        const miembro = Array.isArray(data) ? data[0] : data.miembros?.[0]
+        if (miembro && /^[a-f\d]{24}$/i.test(miembro._id)) {
+          setInfoData(prev => ({
+            ...prev,
+            juntaDirectiva: miembro._id,
+            encargado: miembro._id
+          }))
+        }
+      } catch (err) {
+        console.error('Error al cargar datos:', err)
       }
     }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [dirty])
+    fetchJuntaYEncargado()
+  }, [])
 
-  const handleBack = useCallback(() => {
-    if (!dirty || window.confirm('Tienes cambios sin guardar. Al salir, se perderán. ¿Continuar?')) {
-      navigate(-1)
+  const handleGuardar = async () => {
+    const token = localStorage.getItem('token')
+    const payload = {
+      tipo: infoData.tipo,
+      fecha: infoData.fecha,
+      hora: infoData.hora,
+      modalidad: infoData.modalidad,
+      plataforma: infoData.plataforma,
+      juntaDirectiva: infoData.juntaDirectiva,
+      encargado: infoData.encargado,
+      invitados,
+      agendaDtos
     }
-  }, [dirty, navigate])
 
-  const [activeTab, setActiveTab] = useState<TabKey>('info')
+    console.log('Payload:', payload)
+
+    try {
+      const res = await fetch('http://localhost:3000/api/sesiones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) throw new Error(await res.text())
+      setDirty(false)
+      navigate('/dashboard')
+    } catch (err) {
+      alert('Error al guardar sesión: ' + err)
+      console.error(err)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 bg-white shadow">
-        <button
-          onClick={handleBack}
-          className="flex items-center text-gray-600 hover:text-gray-800 px-3 py-1 rounded border border-gray-300 hover:border-gray-400 transition"
-        >
-          ← Volver
-        </button>
+        <button onClick={() => !dirty || window.confirm('Tienes cambios sin guardar. ¿Salir?') ? navigate(-1) : null} className="text-gray-600">← Volver</button>
         <h1 className="text-2xl font-semibold">Crear Nueva Sesión</h1>
-        <div style={{ width: 60 }} /> {/* espacio */}
+        <div style={{ width: 60 }} />
       </header>
 
-      <nav className="bg-white border-b px-6">
-        <ul className="flex justify-center space-x-4">
-          {TABS.map(({ key, label }) => (
-            <li key={key}>
-              <button
-                onClick={() => setActiveTab(key)}
-                className={`px-3 py-4 text-sm font-medium ${
-                  activeTab === key
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                {label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
       <main className="flex-1 overflow-auto p-6 space-y-8">
-        {activeTab === 'info'        && <BasicInfoSection    markDirty={markDirty} />}
-        {activeTab === 'convocados'  && <ConvocadosSection  markDirty={markDirty} />}
-        {activeTab === 'agenda'      && <AgendaSection      markDirty={markDirty} />}
-        {activeTab === 'notificacion'&& <NotificationSection markDirty={markDirty} />}
+        {activeTab === 'info' && (
+          <BasicInfoSection
+            data={infoData}
+            onChange={setInfoData}
+            markDirty={markDirty}
+          />
+        )}
+        {activeTab === 'convocados' && (
+          <ConvocadosSection
+            data={invitados}
+            onChange={setInvitados}
+            markDirty={markDirty}
+          />
+        )}
+        {activeTab === 'agenda' && (
+          <AgendaSection
+            data={agendaDtos}
+            onChange={setAgendaDtos}
+            markDirty={markDirty}
+          />
+        )}
+        {activeTab === 'notificacion' && <NotificationSection markDirty={markDirty} />}
 
         <div className="text-right">
           <button
-            onClick={() => {
-              // TODO: llamar a la API para guardar
-              setDirty(false)
-              navigate('/dashboard')
-            }}
+            onClick={handleGuardar}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
           >
             Guardar Sesión

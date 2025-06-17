@@ -4,6 +4,7 @@ import type { FC } from 'react'
 export interface Member {
   nombre: string
   email: string
+  roles: string[]
 }
 
 interface MembersSectionProps {
@@ -26,6 +27,7 @@ const MembersSection: FC<MembersSectionProps> = ({ members, onBack }) => (
           <tr>
             <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Nombre</th>
             <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Email</th>
+            <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Roles</th>
           </tr>
         </thead>
         <tbody>
@@ -33,11 +35,12 @@ const MembersSection: FC<MembersSectionProps> = ({ members, onBack }) => (
             <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
               <td className="px-6 py-4 text-sm text-gray-800">{m.nombre}</td>
               <td className="px-6 py-4 text-sm text-gray-800">{m.email}</td>
+              <td className="px-6 py-4 text-sm text-gray-800">{m.roles.join(', ')}</td>
             </tr>
           ))}
           {members.length === 0 && (
             <tr>
-              <td colSpan={2} className="px-6 py-4 text-center text-gray-500">
+              <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
                 No hay miembros de junta.
               </td>
             </tr>
@@ -48,4 +51,4 @@ const MembersSection: FC<MembersSectionProps> = ({ members, onBack }) => (
   </section>
 )
 
-export default MembersSection
+export default MembersSection;

@@ -17,7 +17,6 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
   onSesionActivaClick
 }) => (
   <div>
-    {/* Encabezado */}
     <div className="mb-8 text-center">
       <h2 className="text-2xl font-semibold text-gray-800">
         Bienvenido al Sistema de Gestión de Sesiones TEC
@@ -27,9 +26,7 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
       </p>
     </div>
 
-    {/* Tarjetas apiladas */}
     <div className="flex flex-col gap-4">
-      {/* Sesiones Recientes */}
       <button
         onClick={onSessionsClick}
         className="w-full flex items-center p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
@@ -43,7 +40,6 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
         </div>
       </button>
 
-      {/* Miembros de Junta */}
       <button
         onClick={onMembersClick}
         className="w-full flex items-center p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
@@ -57,7 +53,6 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({
         </div>
       </button>
 	  
-	  {/* Sesión Activa */}
 	   <button
           onClick={onSesionActivaClick}
           className="w-full flex items-center p-6 bg-white rounded-lg shadow hover:shadow-lg transition"

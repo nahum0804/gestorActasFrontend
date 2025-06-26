@@ -33,6 +33,7 @@ const CreateSessionPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('info')
 
   const userId = localStorage.getItem('userId') || ''
+  console.log(userId)
   const [infoData, setInfoData] = useState<InfoData>({
     tipo: 'ORDINARIA',
     fecha: '',

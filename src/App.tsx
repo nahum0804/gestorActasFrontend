@@ -32,7 +32,7 @@ const App: React.FC = () => {
   }, []);
 
   // Guardar token y roles después del login exitoso
-  const handleLoginSuccess = (token: string, userEmail: string, roles: UserRole[] = ['VISOR']) => {
+  const handleLoginSuccess = (token: string, userEmail: string, roles: UserRole[] = ['ADMINISTRADOR']) => {
     localStorage.setItem('authToken', token);
     localStorage.setItem('userEmail', userEmail);
     localStorage.setItem('userRoles', JSON.stringify(roles));

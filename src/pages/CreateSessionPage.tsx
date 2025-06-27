@@ -32,7 +32,7 @@ const CreateSessionPage: React.FC = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabKey>('info')
 
-  const userId = localStorage.getItem('userId') || ''
+  const userId = localStorage.getItem('userId')
   console.log(userId)
   const [infoData, setInfoData] = useState<InfoData>({
     tipo: 'ORDINARIA',
@@ -54,19 +54,6 @@ const CreateSessionPage: React.FC = () => {
     const token = localStorage.getItem('authToken')
     if (!token) return
 
-    // decodificar token para obtener encargado
-    try {
-      const parts = token.split('.')
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]))
-        const sub = payload.sub || payload.userId || ''
-        setInfoData(f => ({ ...f, encargado: sub }))
-      }
-    } catch {
-      console.warn('No se pudo decodificar el token')
-    }
-
-    // cargar junta directiva
     fetch('http://localhost:3000/api/junta-directiva', {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       cache: 'no-store'
@@ -131,7 +118,6 @@ const CreateSessionPage: React.FC = () => {
       return
     }
 
-    // construimos solo las propiedades que el backend acepta
     const payload = {
       tipo: infoData.tipo,
       fecha: infoData.fecha,

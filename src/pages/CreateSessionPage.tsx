@@ -145,6 +145,7 @@ const CreateSessionPage: React.FC = () => {
         },
         body: JSON.stringify(payload)
       })
+	  console.log(res)
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null)
         throw new Error(errorBody?.message || res.statusText)

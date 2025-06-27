@@ -26,16 +26,46 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
   const puedeRedactar = sesionPendiente && agendaAprobada
 
   useEffect(() => {
-    if (sesion?.agenda?.length > 0) {
-      const inicial = sesion.agenda.map((punto: any) => ({
-        punto: typeof punto === 'string' ? punto : punto._id,
-        resumen: '',
-        votosAFavor: 0,
-        votosEnContra: 0,
-        abstencion: 0,
-      }))
-      setResolucionesFormulario(inicial)
+    const cargarPuntos = async () => {
+      const token = localStorage.getItem('token')
+
+      if (!sesion?.agenda || sesion.agenda.length === 0) {
+        console.warn('Agenda vacía o no definida')
+        return
+      }
+
+      try {
+        const puntosCompletos = await Promise.all(
+          sesion.agenda.map(async (puntoId: string) => {
+            const res = await fetch(`http://localhost:3000/api/sesiones/punto/${puntoId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            })
+            if (!res.ok) throw new Error('Error al cargar punto de agenda')
+            const punto = await res.json()
+			console.log(punto)
+            return {
+              punto: {
+                id: punto._id,
+                titulo: punto.titulo,
+                orden: punto.orden,
+                tipo: punto.tipo,
+              },
+              resumen: '',
+              votosAFavor: 0,
+              votosEnContra: 0,
+              abstencion: 0,
+            }
+          })
+        )
+        setResolucionesFormulario(puntosCompletos)
+      } catch (err) {
+        console.error('Error cargando puntos de agenda:', err)
+      }
     }
+
+    cargarPuntos()
   }, [sesion])
 
   const handleCambioResolucion = (index: number, campo: string, valor: any) => {
@@ -57,7 +87,7 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
   const guardarActa = async () => {
     const token = localStorage.getItem('token')
     const resoluciones = resolucionesFormulario.map((res) => ({
-      punto: typeof res.punto === 'string' ? res.punto : res.punto?._id || '',
+      punto: res.punto?.id || '',
       resumen: res.resumen || '',
       votosAFavor: parseInt(res.votosAFavor) || 0,
       votosEnContra: parseInt(res.votosEnContra) || 0,
@@ -72,7 +102,6 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
       },
       body: JSON.stringify({ resoluciones, justificaciones }),
     })
-
     if (!response.ok) {
       const errorText = await response.text()
       let mensaje = 'Error al guardar el acta'
@@ -88,22 +117,93 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
 
   const generarPdf = (): string => {
     const doc = new jsPDF()
-    doc.text('Acta de Sesion', 10, 10)
-    doc.text(contenido, 10, 20)
+    const marginX = 20
+    let y = 20
 
-    doc.text('Resoluciones:', 10, 30)
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    doc.text('ACTA DE SESIÓN', marginX, y)
+    y += 10
+
+    doc.setFontSize(12)
+    doc.setFont(undefined, 'normal')
+    doc.text(`Sesión realizada el ${new Date().toLocaleDateString('es-CR', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    })}`, marginX, y)
+    y += 8
+    doc.text(`Lugar: ${sesion?.lugar || 'No especificado'}`, marginX, y)
+    y += 8
+    doc.text(`Hora de inicio: ${sesion?.hora || 'No especificada'}`, marginX, y)
+    y += 10
+
+    if (sesion?.invitados?.length > 0) {
+      doc.setFont(undefined, 'bold')
+      doc.text('Participantes presentes:', marginX, y)
+      y += 6
+      doc.setFont(undefined, 'normal')
+      sesion.invitados.forEach((inv: any) => {
+        doc.text(`- ${inv.nombre} (${inv.correo})`, marginX + 4, y)
+        y += 6
+      })
+      y += 4
+    }
+
+    if (justificaciones.length > 0) {
+      doc.setFont(undefined, 'bold')
+      doc.text('Ausencias justificadas:', marginX, y)
+      y += 6
+      doc.setFont(undefined, 'normal')
+      justificaciones.forEach((jus, idx) => {
+        doc.text(`- ${jus.invitadoEmail}: ${jus.razon}`, marginX + 4, y)
+        y += 6
+      })
+      y += 4
+    }
+
+    doc.setFont(undefined, 'bold')
+    doc.text('Contenido del acta:', marginX, y)
+    y += 6
+    doc.setFont(undefined, 'normal')
+    const contenidoLines = doc.splitTextToSize(contenido, 170)
+    doc.text(contenidoLines, marginX, y)
+    y += contenidoLines.length * 6 + 6
+
+    doc.setFont(undefined, 'bold')
+    doc.text('Resoluciones:', marginX, y)
+    y += 8
+
     resolucionesFormulario.forEach((res, idx) => {
-      doc.text(
-        `Punto ${idx + 1}: ${res.punto}\nResumen: ${res.resumen}\nA Favor: ${res.votosAFavor}, En Contra: ${res.votosEnContra}, Abstención: ${res.abstencion}`,
-        10,
-        40 + idx * 20
-      )
+      doc.setFont(undefined, 'bold')
+      doc.text(`Artículo ${res.punto.orden || idx + 1}: ${res.punto?.titulo || '(Sin título)'}`, marginX, y)
+      y += 6
+      doc.setFont(undefined, 'normal')
+      doc.text(`Tipo: ${res.punto.tipo}`, marginX, y)
+      y += 6
+      doc.text(`Resumen: ${res.resumen || '-'}`, marginX, y)
+      y += 6
+      doc.text(`Resultado de votación:`, marginX, y)
+      y += 6
+      doc.text(`  - Votos a favor: ${res.votosAFavor}`, marginX + 4, y)
+      y += 6
+      doc.text(`  - Votos en contra: ${res.votosEnContra}`, marginX + 4, y)
+      y += 6
+      doc.text(`  - Abstenciones: ${res.abstencion}`, marginX + 4, y)
+      y += 6
+      doc.text(`Acuerdo: ACUERDO FIRME`, marginX, y)
+      y += 10
     })
 
-    doc.text('Justificaciones:', 10, 40 + resolucionesFormulario.length * 20)
-    justificaciones.forEach((jus, idx) => {
-      doc.text(`Ausente: ${jus.invitadoEmail}, Razón: ${jus.razon}`, 10, 50 + resolucionesFormulario.length * 20 + idx * 10)
-    })
+    doc.setFont(undefined, 'bold')
+    doc.text('__________________________________', marginX, y)
+    y += 6
+    doc.setFont(undefined, 'normal')
+    doc.text(`${sesion?.presidente || 'Nombre del Presidente'}`, marginX, y)
+    y += 6
+    doc.text('Presidente del Consejo', marginX, y)
+    y += 6
+    doc.text('Carrera Ingeniería en Computación', marginX, y)
+    y += 6
+    doc.text('Campus Tecnológico Local de San José', marginX, y)
 
     doc.save('acta.pdf')
     const base64 = doc.output('dataurlstring').split(',')[1]
@@ -114,13 +214,42 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
     const listaCorreos = correos.split(',').map(c => c.trim()).filter(c => c.length > 0)
     if (listaCorreos.length === 0) throw new Error('No se encontraron correos válidos para enviar.')
 
+    const fechaSesion = new Date().toLocaleDateString('es-CR', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    })
+
+    const resumenAgenda = resolucionesFormulario.map((r, idx) => (
+      `Punto ${r.punto?.orden || idx + 1}: ${r.punto?.titulo || '(Sin título)'}\n` +
+      `Resumen: ${r.resumen || '-'}\n` +
+      `Tipo: ${r.punto.tipo}\n` +
+      `Votos a favor: ${r.votosAFavor}\nEn contra: ${r.votosEnContra}\nAbstenciones: ${r.abstencion}\n`
+    )).join('\n\n')
+
+    const resumenJustificaciones = justificaciones.length > 0
+      ? justificaciones.map((j, idx) => `🙋‍♂️ Ausente ${idx + 1}: ${j.invitadoEmail} — Razón: ${j.razon}`).join('\n')
+      : 'No se registraron ausencias justificadas.'
+
+    const cuerpo = `
+Estimado(a),
+
+Por medio del presente se remite el acta correspondiente a la sesión celebrada el día ${fechaSesion}.
+
+${contenido}
+
+${resumenAgenda}
+
+${resumenJustificaciones}
+
+Saludos cordiales.
+    `.trim()
+
     for (const correo of listaCorreos) {
       await emailjs.send(
         'service_i73yyoi',
         'template_0ddie3x',
         {
           email: correo,
-          message: 'Acta de sesión redactada.',
+          message: cuerpo,
           attachment: pdfBase64,
         },
         'PAk_0pLu4r-tPDVue'
@@ -175,39 +304,49 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
 
       <div>
         <h3 className="font-semibold">Resoluciones por Punto</h3>
-        {resolucionesFormulario.map((res, idx) => (
-          <div key={idx} className="border p-3 mb-2 rounded">
-            <p className="font-medium">Punto ID: {res.punto}</p>
-            <input
-              type="text"
-              placeholder="Resumen"
-              value={res.resumen}
-              onChange={(e) => handleCambioResolucion(idx, 'resumen', e.target.value)}
-              className="w-full p-2 border rounded mb-2"
-            />
-            <input
-              type="number"
-              placeholder="Votos a favor"
-              value={res.votosAFavor}
-              onChange={(e) => handleCambioResolucion(idx, 'votosAFavor', e.target.value)}
-              className="w-full p-2 border rounded mb-2"
-            />
-            <input
-              type="number"
-              placeholder="Votos en contra"
-              value={res.votosEnContra}
-              onChange={(e) => handleCambioResolucion(idx, 'votosEnContra', e.target.value)}
-              className="w-full p-2 border rounded mb-2"
-            />
-            <input
-              type="number"
-              placeholder="Abstenciones"
-              value={res.abstencion}
-              onChange={(e) => handleCambioResolucion(idx, 'abstencion', e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-        ))}
+		{resolucionesFormulario.map((res, idx) => (
+		  <div key={idx} className="border p-3 mb-2 rounded">
+		    <p className="font-medium">
+		      Punto {res.punto?.orden || idx + 1}: {res.punto?.titulo}
+		    </p>
+		    <p className="text-sm text-gray-600 mb-2">
+		      Tipo: {res.punto?.tipo}
+		    </p>
+		    <input
+		      type="text"
+		      placeholder="Resumen"
+		      value={res.resumen}
+		      onChange={(e) => handleCambioResolucion(idx, 'resumen', e.target.value)}
+		      className="w-full p-2 border rounded mb-2"
+		    />
+		    
+		    {res.punto?.tipo?.toLowerCase() === 'votacion' && (
+		      <>
+		        <input
+		          type="number"
+		          placeholder="Votos a favor"
+		          value={res.votosAFavor}
+		          onChange={(e) => handleCambioResolucion(idx, 'votosAFavor', e.target.value)}
+		          className="w-full p-2 border rounded mb-2"
+		        />
+		        <input
+		          type="number"
+		          placeholder="Votos en contra"
+		          value={res.votosEnContra}
+		          onChange={(e) => handleCambioResolucion(idx, 'votosEnContra', e.target.value)}
+		          className="w-full p-2 border rounded mb-2"
+		        />
+		        <input
+		          type="number"
+		          placeholder="Abstenciones"
+		          value={res.abstencion}
+		          onChange={(e) => handleCambioResolucion(idx, 'abstencion', e.target.value)}
+		          className="w-full p-2 border rounded"
+		        />
+		      </>
+		    )}
+		  </div>
+		))}
       </div>
 
       <div>

@@ -48,6 +48,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('userEmail', data.email);
       localStorage.setItem('userId', data.id);
+      localStorage.setItem('userName', data.name);
+      localStorage.setItem('userLastName', data.lastName);
       onLoginSuccess(data.token, data.email);
       navigate('/dashboard');
     } catch (err: unknown) {

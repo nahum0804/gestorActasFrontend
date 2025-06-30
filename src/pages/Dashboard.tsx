@@ -7,6 +7,8 @@ import type { Session } from '../components/dashboard/SesionSection'
 import MembersSection from '../components/dashboard/MembersSection'
 import type { Member } from '../components/dashboard/MembersSection'
 import SesionActiva from './SesionActiva'
+import { useNotifications } from '../hooks/useNotifications'
+import { BellIcon } from '@heroicons/react/24/outline'
 
 interface DashboardProps {
   onLogout: () => void
@@ -15,8 +17,13 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const navigate = useNavigate()
 
+  const token = localStorage.getItem('authToken') || ''
+
   const [pestana, setPestana] = useState<'Sesiones' | 'settings'>('Sesiones')
-  const [view, setView] = useState<'menu' | 'Sesiones' | 'members' | 'sesion-activa'>('menu')
+  const [view, setView] = useState<'menu' | 'Sesiones' | 'members' | 'sesion-activa' >('menu')
+
+  const { notifs, unreadCount, markRead, remove } =
+    useNotifications(token, !!token)
 
   // --- SESIONES ---
   const [sessions, setSessions] = useState<Session[]>([])
@@ -146,44 +153,103 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           >
             Crear Sesión
           </button>
+
+          <button
+            onClick={() => setView('notificaciones')}
+            className="relative p-2 hover:bg-gray-100 rounded-full"
+          >
+            <BellIcon className="h-6 w-6 text-gray-600" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </button>
         </header>
 
         <main className="flex-1 overflow-auto p-6">
-          {pestana === 'Sesiones' && (
-            <>
-              {view === 'menu' && (
-                <SummaryCards
-                  totalSessions={sessions.length}
-                  totalMembers={members.length}
-                  onSessionsClick={() => setView('Sesiones')}
-                  onMembersClick={handleMembersClick}
-                  onSesionActivaClick={() => setView('sesion-activa')}
-                />
-              )}
+          {pestana==='Sesiones' && (
+            view==='notificaciones' ? (
+              // ==== PANEL DE NOTIFICACIONES ====
+              <div className="max-w-xl mx-auto space-y-4">
+                <h2 className="text-xl font-bold mb-4">Notificaciones</h2>
+                {notifs.length===0 ? (
+                  <p className="text-gray-500">No tienes notificaciones.</p>
+                ) : (
+                  notifs.map(n => (
+                    <div
+                      key={n._id}
+                      className={`p-4 border rounded flex justify-between items-start ${
+                        n.leido ? 'bg-gray-50' : 'bg-white'
+                      }`}
+                    >
+                      <div>
+                        <p className="font-medium">{n.asunto}</p>
+                        <p className="text-sm text-gray-700 mt-1">{n.contenido}</p>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        {!n.leido && (
+                          <button
+                            onClick={()=>markRead(n._id)}
+                            className="text-blue-600 text-sm hover:underline"
+                          >
+                            Marcar leída
+                          </button>
+                        )}
+                        <button
+                          onClick={()=>remove(n._id)}
+                          className="text-red-600 text-sm hover:underline"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+                <button
+                  onClick={()=>setView('menu')}
+                  className="mt-6 text-gray-600 hover:underline"
+                >
+                  ← Volver
+                </button>
+              </div>
+            ) : (
+              // ==== PANEL DE SESIONES / MEMBERS / SESION ACTIVA ====
+              <>
+                {view==='menu' && (
+                  <SummaryCards
+                    totalSessions={sessions.length}
+                    totalMembers={members.length}
+                    onSessionsClick={()=>setView('Sesiones')}
+                    onMembersClick={handleMembersClick}
+                    onSesionActivaClick={()=>setView('sesion-activa')}
+                  />
+                )}
 
-              {view === 'Sesiones' && (
-                <SessionsSection
-                  sessions={sessions}
-                  onBack={() => setView('menu')}
-                  loading={loadingSessions}
-                />
-              )}
+                {view==='Sesiones' && (
+                  <SessionsSection
+                    sessions={sessions}
+                    onBack={()=>setView('menu')}
+                    loading={loadingSessions}
+                  />
+                )}
 
-              {view === 'members' && (
-                loadingMembers
-                  ? <p>Cargando miembros…</p>
-                  : errorMembers
-                    ? <p className="text-red-500">Error: {errorMembers}</p>
-                    : <MembersSection members={members} onBack={() => setView('menu')} />
-              )}
+                {view==='members' && (
+                  loadingMembers
+                    ? <p>Cargando miembros…</p>
+                    : errorMembers
+                      ? <p className="text-red-500">Error: {errorMembers}</p>
+                      : <MembersSection members={members} onBack={()=>setView('menu')} />
+                )}
 
-              {view === 'sesion-activa' && (
-                <SesionActiva onBack={() => setView('menu')} />
-              )}
-            </>
+                {view==='sesion-activa' && (
+                  <SesionActiva onBack={()=>setView('menu')} />
+                )}
+              </>
+            )
           )}
 
-          {pestana === 'settings' && (
+          {pestana==='settings' && (
             <section className="p-6">
               <h2 className="text-xl font-medium mb-2">Settings</h2>
               <p className="text-gray-600">Configura tu perfil, notificaciones, etc.</p>

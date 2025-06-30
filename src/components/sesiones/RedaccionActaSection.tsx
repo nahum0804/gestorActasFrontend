@@ -18,7 +18,7 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
   const [contenido, setContenido] = useState('')
   const [correos, setCorreos] = useState('')
   const [guardado, setGuardado] = useState(false)
-  const [enviando, setEnviando] = useState(false)
+  const [descargando, setDescargando] = useState(false)
   const [error, setError] = useState('')
   const [resolucionesFormulario, setResolucionesFormulario] = useState<any[]>([])
   const [justificaciones, setJustificaciones] = useState<any[]>([])
@@ -51,11 +51,15 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
                 titulo: punto.titulo,
                 orden: punto.orden,
                 tipo: punto.tipo,
+                expositorNombre: punto.expositor
               },
               resumen: '',
               votosAFavor: 0,
               votosEnContra: 0,
               abstencion: 0,
+              responsable: '',
+              enlaceUrl: punto.enlaceUrl,
+              enlaceTexto: punto.enlaceTexto
             }
           })
         )
@@ -92,6 +96,7 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
       votosAFavor: parseInt(res.votosAFavor) || 0,
       votosEnContra: parseInt(res.votosEnContra) || 0,
       abstencion: parseInt(res.abstencion) || 0,
+      responsable: res.responsable || '',
     }))
 
     const response = await fetch(`http://localhost:3000/api/sesiones/${sesionId}/acta`, {
@@ -210,54 +215,7 @@ const RedaccionActaSection: React.FC<RedaccionActaSectionProps> = ({
     return `data:application/pdf;base64,${base64}`
   }
 
-  const enviarCorreo = async (pdfBase64: string) => {
-    const listaCorreos = correos.split(',').map(c => c.trim()).filter(c => c.length > 0)
-    if (listaCorreos.length === 0) throw new Error('No se encontraron correos válidos para enviar.')
-
-    const fechaSesion = new Date().toLocaleDateString('es-CR', {
-      year: 'numeric', month: 'long', day: 'numeric'
-    })
-
-    const resumenAgenda = resolucionesFormulario.map((r, idx) => (
-      `Punto ${r.punto?.orden || idx + 1}: ${r.punto?.titulo || '(Sin título)'}\n` +
-      `Resumen: ${r.resumen || '-'}\n` +
-      `Tipo: ${r.punto.tipo}\n` +
-      `Votos a favor: ${r.votosAFavor}\nEn contra: ${r.votosEnContra}\nAbstenciones: ${r.abstencion}\n`
-    )).join('\n\n')
-
-    const resumenJustificaciones = justificaciones.length > 0
-      ? justificaciones.map((j, idx) => `🙋‍♂️ Ausente ${idx + 1}: ${j.invitadoEmail} — Razón: ${j.razon}`).join('\n')
-      : 'No se registraron ausencias justificadas.'
-
-    const cuerpo = `
-Estimado(a),
-
-Por medio del presente se remite el acta correspondiente a la sesión celebrada el día ${fechaSesion}.
-
-${contenido}
-
-${resumenAgenda}
-
-${resumenJustificaciones}
-
-Saludos cordiales.
-    `.trim()
-
-    for (const correo of listaCorreos) {
-      await emailjs.send(
-        'service_i73yyoi',
-        'template_0ddie3x',
-        {
-          email: correo,
-          message: cuerpo,
-          attachment: pdfBase64,
-        },
-        'PAk_0pLu4r-tPDVue'
-      )
-    }
-  }
-
-  const handleGuardarYEnviar = async () => {
+  const handleGuardar = async () => {
     setError('')
     setGuardado(false)
 
@@ -266,22 +224,13 @@ Saludos cordiales.
       return
     }
 
-    if (!correos.trim()) {
-      setError('Por favor ingresa al menos un correo destinatario')
-      return
-    }
-
-    setEnviando(true)
     try {
       await guardarActa()
-      const pdfBase64 = generarPdf()
-      await enviarCorreo(pdfBase64)
+  
       setGuardado(true)
     } catch (err: any) {
       console.error(err)
       setError(err.message || 'Error desconocido')
-    } finally {
-      setEnviando(false)
     }
   }
 
@@ -304,49 +253,107 @@ Saludos cordiales.
 
       <div>
         <h3 className="font-semibold">Resoluciones por Punto</h3>
-		{resolucionesFormulario.map((res, idx) => (
-		  <div key={idx} className="border p-3 mb-2 rounded">
-		    <p className="font-medium">
-		      Punto {res.punto?.orden || idx + 1}: {res.punto?.titulo}
-		    </p>
-		    <p className="text-sm text-gray-600 mb-2">
-		      Tipo: {res.punto?.tipo}
-		    </p>
-		    <input
-		      type="text"
-		      placeholder="Resumen"
-		      value={res.resumen}
-		      onChange={(e) => handleCambioResolucion(idx, 'resumen', e.target.value)}
-		      className="w-full p-2 border rounded mb-2"
-		    />
-		    
-		    {res.punto?.tipo?.toLowerCase() === 'votacion' && (
-		      <>
-		        <input
-		          type="number"
-		          placeholder="Votos a favor"
-		          value={res.votosAFavor}
-		          onChange={(e) => handleCambioResolucion(idx, 'votosAFavor', e.target.value)}
-		          className="w-full p-2 border rounded mb-2"
-		        />
-		        <input
-		          type="number"
-		          placeholder="Votos en contra"
-		          value={res.votosEnContra}
-		          onChange={(e) => handleCambioResolucion(idx, 'votosEnContra', e.target.value)}
-		          className="w-full p-2 border rounded mb-2"
-		        />
-		        <input
-		          type="number"
-		          placeholder="Abstenciones"
-		          value={res.abstencion}
-		          onChange={(e) => handleCambioResolucion(idx, 'abstencion', e.target.value)}
-		          className="w-full p-2 border rounded"
-		        />
-		      </>
-		    )}
-		  </div>
-		))}
+          {resolucionesFormulario.map((res, idx) => {
+            const tipoLower = res.punto.tipo.toLowerCase()
+            const esVotable = tipoLower === 'votacion' || tipoLower === 'estrategico'
+            return (
+              <div key={idx} className="border p-4 mb-4 rounded">
+                {/* Título del punto */}
+                <p className="font-medium">
+                  Punto {res.punto.orden || idx + 1}: {res.punto.titulo}
+                </p>
+                <p className="text-sm text-gray-600 mb-1">
+                  Tipo: {res.punto.tipo}
+                </p>
+
+                {/* Aquí mostramos el expositor */}
+                {res.punto.expositor && (
+                  <p className="text-sm text-gray-700 mb-3">
+                    <span className="font-medium">Expositor:</span>{' '}
+                    {res.punto.expositor}
+                  </p>
+                )}
+
+                {res.punto.enlaceUrl && (
+                  <p className="mb-2">
+                    <a
+                      href={res.punto.enlaceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {res.punto.enlaceTexto || 'Ver documento'}
+                    </a>
+                  </p>
+                )}
+
+                {/* Resumen */}
+                <label className="block text-sm font-medium mb-1">Resumen</label>
+                <textarea
+                  rows={2}
+                  className="w-full p-2 border rounded mb-4"
+                  value={res.resumen}
+                  onChange={e => handleCambioResolucion(idx, 'resumen', e.target.value)}
+                />
+
+                {/* Responsable solo para ESTRATEGICO */}
+                {tipoLower === 'estrategico' && (
+                  <>
+                    <label className="block text-sm font-medium mb-1">
+                      Responsable (correo)
+                    </label>
+                    <input
+                      type="email"
+                      className="w-full p-2 border rounded mb-4"
+                      value={res.responsable}
+                      onChange={e =>
+                        handleCambioResolucion(idx, 'responsable', e.target.value)
+                      }
+                    />
+                  </>
+                )}
+
+                {/* Votos */}
+                {esVotable && (
+                  <>
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium mb-1">A favor</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={res.votosAFavor}
+                        onChange={e =>
+                          handleCambioResolucion(idx, 'votosAFavor', e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium mb-1">En contra</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={res.votosEnContra}
+                        onChange={e =>
+                          handleCambioResolucion(idx, 'votosEnContra', e.target.value)
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Abstenciones</label>
+                      <input
+                        type="number"
+                        className="w-full p-2 border rounded"
+                        value={res.abstencion}
+                        onChange={e =>
+                          handleCambioResolucion(idx, 'abstencion', e.target.value)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })}
       </div>
 
       <div>
@@ -382,20 +389,12 @@ Saludos cordiales.
         </button>
       </div>
 
-      <input
-        type="text"
-        value={correos}
-        onChange={(e) => setCorreos(e.target.value)}
-        className="w-full p-3 border border-gray-300 rounded"
-        placeholder="Correo(s) destinatario(s), separados por coma"
-      />
-
       <button
-        onClick={handleGuardarYEnviar}
-        disabled={enviando}
+        onClick={ async () => { handleGuardar(); generarPdf(); } }
+        disabled={descargando}
         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50"
       >
-        {enviando ? 'Enviando...' : 'Guardar y Enviar Acta'}
+        {descargando ? 'Descargando...' : 'Descargar Acta'}
       </button>
 
       {guardado && (
